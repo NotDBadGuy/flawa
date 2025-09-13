@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Note</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=Dancing+Script:wght@600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --ink: #2b2b2b;
+        --paper: #fdf7e8;
+        --paper-edge: #e9dcc4;
+        --accent: #800020;
+        --shadow: 0 24px 60px rgba(0, 0, 0, 0.28);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        margin: 0;
+        color: var(--ink);
+        background: radial-gradient(
+            1200px 600px at 70% -10%,
+            rgba(255, 255, 255, 0.1),
+            transparent 60%
+          ),
+          #640018;
+        display: grid;
+        place-items: center;
+        overflow-x: hidden;
+        font-family: "Crimson Pro", Georgia, serif;
+        min-height: 100vh;
+      }
+
+      /* ===== LOADER (envelope + wax) ===== */
+      .loader {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.92);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        transition: opacity 0.6s ease;
+        color: #fff;
+      }
+      .loader.hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .env-scene {
+        width: min(460px, 90vw);
+        max-width: 90%;
+      }
+      .envelope {
+        position: relative;
+        width: 100%;
+        aspect-ratio: 4/2.6;
+        perspective: 1400px;
+        filter: drop-shadow(0 18px 50px rgba(0, 0, 0, 0.45));
+      }
+      .env-back {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(180deg, #f1e4d4, #e7d7c4);
+        border: 1px solid #d9c6b2;
+        border-radius: 12px;
+      }
+      .env-lid {
+        position: absolute;
+        inset: 0;
+        transform-origin: top center;
+        background: linear-gradient(180deg, #ead9c8, #e2cfba);
+        clip-path: polygon(0 0, 100% 0, 50% 62%);
+        border-top-left-radius: 12px;
+        border-top-right-radius: 12px;
+        border: 1px solid #d9c6b2;
+      }
+      .env-pocket {
+        position: absolute;
+        inset: 0;
+        clip-path: polygon(0 100%, 0 38%, 50% 72%, 100% 38%, 100% 100%);
+        background: linear-gradient(180deg, #e6d4c1, #e0cbb5);
+        border: 1px solid #d9c6b2;
+        border-bottom-left-radius: 12px;
+        border-bottom-right-radius: 12px;
+      }
+      .wax {
+        position: absolute;
+        left: 50%;
+        top: 36%;
+        transform: translate(-50%, -50%);
+        width: 70px;
+        height: 70px;
+        border-radius: 50%;
+        background: radial-gradient(
+          circle at 35% 35%,
+          #a00028 0 40%,
+          #7d001e 41% 100%
+        );
+        box-shadow: inset 0 7px 16px rgba(255, 255, 255, 0.14),
+          0 8px 18px rgba(0, 0, 0, 0.35);
+        display: grid;
+        place-items: center;
+        color: #ffd6df;
+        font-weight: 800;
+        letter-spacing: 1px;
+        border: 2px solid rgba(255, 255, 255, 0.25);
+      }
+      .wax::after {
+        content: "FL";
+        font-size: 20px;
+      }
+
+      .status {
+        text-align: center;
+        margin: 16px 0 12px;
+        font-weight: 700;
+        letter-spacing: 0.3px;
+        font-size: 1rem;
+      }
+      .progress {
+        height: 10px;
+        background: #1e1e1e;
+        border-radius: 999px;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        margin: 0 10px;
+      }
+      .bar {
+        height: 100%;
+        width: 0;
+        background: linear-gradient(90deg, #ff3b6b, #ff9fbd);
+        transition: width 0.14s linear;
+      }
+      .pct {
+        text-align: center;
+        opacity: 0.85;
+        font-size: 0.9rem;
+        margin-top: 8px;
+      }
+
+      /* envelope animations */
+      .open .env-lid {
+        animation: lid 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+      }
+      @keyframes lid {
+        0% {
+          transform: rotateX(0);
+        }
+        60% {
+          transform: rotateX(-160deg);
+        }
+        100% {
+          transform: rotateX(-178deg);
+        }
+      }
+      .open .wax {
+        animation: seal 0.9s ease forwards 0.1s;
+      }
+      @keyframes seal {
+        0% {
+          transform: translate(-50%, -50%) scale(1);
+        }
+        35% {
+          transform: translate(-50%, -48%) scale(1.08);
+        }
+        100% {
+          transform: translate(-50%, -150%) scale(0.85);
+          opacity: 0;
+        }
+      }
+      .open .letter-card {
+        animation: none;
+      }
+
+      /* ===== MAIN LETTER ===== */
+      .stage {
+        width: min(900px, 95vw);
+        padding: 15px;
+        z-index: 1;
+        position: relative;
+      }
+      .letter {
+        width: 100%;
+        background: radial-gradient(
+            1000px 600px at 50% -10%,
+            rgba(255, 255, 255, 0.6),
+            transparent 60%
+          ),
+          var(--paper);
+        border: 1px solid var(--paper-edge);
+        border-radius: 12px;
+        box-shadow: var(--shadow);
+        padding: 36px 32px 32px 80px;
+        position: relative;
+        transform: translateY(18px) rotateX(8deg);
+        opacity: 0;
+        visibility: hidden;
+        z-index: -1;
+        transition: transform 0.9s cubic-bezier(0.2, 0.8, 0.2, 1),
+          opacity 0.7s ease, visibility 0s linear 0.7s;
+      }
+      .letter.show {
+        transform: translateY(0) rotateX(0);
+        opacity: 1;
+        visibility: visible;
+        z-index: 1;
+        transition-delay: 0s, 0s, 0s, 0s;
+      }
+
+      /* ruled lines + red margin line */
+      .letter::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+              180deg,
+              rgba(0, 0, 0, 0.04) 1px,
+              transparent 1px
+            )
+            0 56px/ 100% 28px repeat-y,
+          linear-gradient(90deg, rgba(200, 0, 0, 0.25), rgba(200, 0, 0, 0.25))
+            60px 0 / 2px 100% no-repeat,
+          radial-gradient(
+            1200px 800px at 50% -10%,
+            transparent,
+            rgba(0, 0, 0, 0.02) 70%
+          );
+        border-radius: 12px;
+        pointer-events: none;
+      }
+
+      .letterhead {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+      }
+      .wax-mark {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: radial-gradient(
+          circle at 35% 35%,
+          #a00028 0 40%,
+          #7d001e 41% 100%
+        );
+        box-shadow: inset 0 4px 8px rgba(255, 255, 255, 0.14),
+          0 3px 8px rgba(0, 0, 0, 0.25);
+        flex-shrink: 0;
+      }
+      .brand {
+        font-weight: 700;
+        letter-spacing: 0.4px;
+        color: #6a2a38;
+        font-size: 0.9rem;
+      }
+
+      .meta {
+        display: flex;
+        justify-content: space-between;
+        color: #6b5a4e;
+        font-size: 0.9rem;
+        margin: 6px 0 20px;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      h1 {
+        font-family: "Dancing Script", "Segoe Script", cursive;
+        font-size: 2.2rem;
+        color: #5a1b2a;
+        margin: 10px 0 6px;
+        line-height: 1.2;
+      }
+      .salute,
+      .closing {
+        font-size: 1rem;
+        color: #5a443a;
+      }
+      .body {
+        margin: 10px 0 14px;
+        font-size: 1rem;
+        line-height: 1.7;
+        color: #332821;
+        max-width: 60ch;
+        text-wrap: pretty;
+      }
+      .signature {
+        margin-top: 16px;
+        font-family: "Dancing Script", "Segoe Script", cursive;
+        font-size: 1.8rem;
+        color: #4a1d28;
+      }
+      .postscript {
+        display: inline-block;
+        margin-top: 10px;
+        font-style: italic;
+        color: #5e5046;
+        background: #fff2c9;
+        padding: 0.4rem 0.6rem;
+        border-radius: 8px;
+        border: 1px solid #ecd9a8;
+        font-size: 0.95rem;
+      }
+
+      /* confetti */
+      canvas#fx {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: 2;
+      }
+
+      /* Mobile optimizations */
+      @media (max-width: 768px) {
+        body {
+          overflow-y: auto;
+          padding: 10px 0;
+        }
+
+        .env-scene {
+          width: min(380px, 85vw);
+        }
+
+        .wax {
+          width: 60px;
+          height: 60px;
+        }
+        .wax::after {
+          font-size: 16px;
+        }
+
+        .stage {
+          width: min(100%, 95vw);
+          padding: 10px;
+        }
+
+        .letter {
+          padding: 28px 20px 24px 60px;
+          border-radius: 10px;
+        }
+
+        .letter::before {
+          background-position: 0 48px, 50px 0, 0 0;
+          background-size: 100% 26px, 2px 100%, 100% 100%;
+        }
+
+        .letterhead {
+          gap: 8px;
+          margin-bottom: 14px;
+        }
+
+        .wax-mark {
+          width: 28px;
+          height: 28px;
+        }
+
+        .brand {
+          font-size: 0.8rem;
+        }
+
+        .meta {
+          font-size: 0.85rem;
+          margin: 4px 0 16px;
+        }
+
+        h1 {
+          font-size: 1.9rem;
+        }
+
+        .salute,
+        .closing {
+          font-size: 0.95rem;
+        }
+
+        .body {
+          font-size: 0.95rem;
+          line-height: 1.6;
+          margin: 8px 0 12px;
+        }
+
+        .signature {
+          font-size: 1.6rem;
+          margin-top: 14px;
+        }
+
+        .postscript {
+          font-size: 0.9rem;
+          padding: 0.35rem 0.5rem;
+        }
+
+        .status {
+          font-size: 0.9rem;
+          margin: 14px 0 10px;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .env-scene {
+          width: min(320px, 90vw);
+        }
+
+        .letter {
+          padding: 24px 16px 20px 50px;
+        }
+
+        .letter::before {
+          background-position: 0 44px, 42px 0, 0 0;
+          background-size: 100% 24px, 2px 100%, 100% 100%;
+        }
+
+        h1 {
+          font-size: 1.7rem;
+        }
+
+        .body {
+          font-size: 0.9rem;
+        }
+
+        .signature {
+          font-size: 1.4rem;
+        }
+
+        .brand {
+          font-size: 0.75rem;
+        }
+
+        .meta {
+          font-size: 0.8rem;
+        }
+      }
+
+      @media (max-width: 360px) {
+        .letter {
+          padding: 20px 14px 18px 44px;
+        }
+
+        .letter::before {
+          background-position: 0 40px, 38px 0, 0 0;
+          background-size: 100% 22px, 2px 100%, 100% 100%;
+        }
+
+        h1 {
+          font-size: 1.5rem;
+        }
+
+        .body {
+          font-size: 0.85rem;
+          line-height: 1.5;
+        }
+
+        .postscript {
+          font-size: 0.85rem;
+        }
+      }
+
+      /* Landscape mobile adjustments */
+      @media (max-height: 500px) and (orientation: landscape) {
+        body {
+          overflow-y: auto;
+          padding: 5px 0;
+        }
+
+        .letter {
+          transform: none;
+        }
+
+        .letter.show {
+          transform: none;
+        }
+      }
+    </style>
+    ```
+  </head>
+  <body>
+    <!-- LOADER -->
+    <div id="loader" class="loader" aria-live="polite">
+      <div class="env-scene" id="envScene">
+        <div class="envelope">
+          <div class="env-back"></div>
+          <div class="env-lid"></div>
+          <div class="env-pocket"></div>
+          <div class="wax"></div>
+          <div class="letter-card"></div>
+        </div>
+        <div class="status" id="status">Sealing your letter…</div>
+        <div class="progress"><div id="bar" class="bar"></div></div>
+        <div class="pct" id="pct">0%</div>
+      </div>
+    </div>
+
+    ```
+    <!-- CONFETTI -->
+    <canvas id="fx"></canvas>
+
+    <!-- LETTER -->
+    <main class="stage" aria-hidden="true" id="stage">
+      <article
+        id="letter"
+        class="letter"
+        role="article"
+        aria-label="A birthday letter for Flawa"
+      >
+        <div class="letterhead">
+          <div class="wax-mark" aria-hidden="true"></div>
+          <div class="brand">Private Correspondence • First Class</div>
+        </div>
+
+        <div class="meta">
+          <div>To: Lady Flawa</div>
+          <div id="date"></div>
+        </div>
+
+        <h1>Happy Birthday ❤️</h1>
+
+        <p class="salute">Dear Flawa,</p>
+
+        <p class="body">
+          Having you in my life has been one of the best things to happen to me.
+          You make everything feel lighter, easier just by being yourself. I
+          love how you laugh, how you notice the little things, and how you
+          somehow make even the quiet moments feel full. Thank you for showing
+          up, for being kind, for being real. I'm grateful for you today and
+          every day after. I can't wait to see what this next year brings for
+          you, and to be there for every little moment we get to share.
+        </p>
+
+        <p class="postscript">P.S. Your gift from me is on the way. 🎁✨</p>
+
+        <p class="closing">With all my love, and always rooting for you.</p>
+        <div class="signature">Goodness</div>
+      </article>
+    </main>
+
+    <script>
+      // util: simple animation
+      function animate(ms, step, done) {
+        const t0 = performance.now();
+        function loop(t) {
+          const p = Math.min(1, (t - t0) / ms);
+          step(p);
+          if (p < 1) requestAnimationFrame(loop);
+          else done && done();
+        }
+        requestAnimationFrame(loop);
+      }
+
+      // date
+      const dateEl = document.getElementById("date");
+      try {
+        const d = new Date();
+        dateEl.textContent = d.toLocaleDateString(undefined, {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        });
+      } catch (e) {
+        dateEl.textContent = "";
+      }
+
+      // confetti
+      const c = document.getElementById("fx"),
+        ctx = c.getContext("2d");
+      let W,
+        H,
+        parts = [];
+      function resize() {
+        W = c.width = innerWidth;
+        H = c.height = innerHeight;
+      }
+      addEventListener("resize", resize);
+      resize();
+      function spawn(n = 120) {
+        parts = Array.from({ length: n }, () => ({
+          x: Math.random() * W,
+          y: -20 - Math.random() * H * 0.3,
+          r: 2 + Math.random() * 3,
+          c: `hsl(${Math.random() * 360},90%,65%)`,
+          vx: -1 + Math.random() * 2,
+          vy: 1 + Math.random() * 2.6,
+          a: Math.random() * Math.PI * 2,
+          va: -0.1 + Math.random() * 0.2,
+        }));
+      }
+      function tick() {
+        ctx.clearRect(0, 0, W, H);
+        for (const p of parts) {
+          p.x += p.vx;
+          p.y += p.vy;
+          p.a += p.va;
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate(p.a);
+          ctx.fillStyle = p.c;
+          ctx.fillRect(-p.r, -p.r, p.r * 2, p.r * 2);
+          ctx.restore();
+        }
+        parts = parts.filter((p) => p.y < H + 40);
+        if (parts.length > 0) requestAnimationFrame(tick);
+      }
+
+      // loader sequence
+      const loader = document.getElementById("loader");
+      const envScene = document.getElementById("envScene");
+      const bar = document.getElementById("bar");
+      const pct = document.getElementById("pct");
+      const status = document.getElementById("status");
+      const letter = document.getElementById("letter");
+      const stage = document.getElementById("stage");
+
+      const steps = [
+        "Preparing your special letter...",
+        "Selecting the finest paper...",
+        "Writing with love and care...",
+        "Adding personal touches...",
+        "Sealing with wax...",
+        "Pressing the wax seal...",
+        "Adding final decorations...",
+        "Preparing for delivery...",
+        "Opening the envelope...",
+        "Ready to read...",
+      ];
+
+      // Keep main page non-interactive until reveal
+      stage.setAttribute("aria-hidden", "true");
+
+      animate(
+        4000,
+        (p) => {
+          const v = Math.floor(p * 100);
+          bar.style.width = v + "%";
+          pct.textContent = v + "%";
+          if (v < 10) status.textContent = steps[0];
+          else if (v < 20) status.textContent = steps[1];
+          else if (v < 30) status.textContent = steps[2];
+          else if (v < 40) status.textContent = steps[3];
+          else if (v < 50) status.textContent = steps[4];
+          else if (v < 60) status.textContent = steps[5];
+          else if (v < 70) status.textContent = steps[6];
+          else if (v < 80) status.textContent = steps[7];
+          else if (v < 95) status.textContent = steps[8];
+          else status.textContent = steps[9];
+        },
+        () => {
+          envScene.classList.add("open");
+          setTimeout(() => {
+            loader.classList.add("hidden");
+            // reveal main letter AFTER loader fully animates out
+            stage.removeAttribute("aria-hidden");
+            requestAnimationFrame(() => {
+              letter.classList.add("show");
+              spawn(120);
+              tick();
+              setTimeout(() => spawn(60), 1400);
+            });
+          }, 700);
+        }
+      );
+    </script>
+  </body>
+</html>
